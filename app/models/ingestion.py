@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Text, func
+from sqlalchemy import DateTime, Enum, ForeignKey, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -18,6 +18,9 @@ class IngestionStatus(enum.StrEnum):
 
 class IngestionJob(TimestampMixin, Base):
     __tablename__ = "ingestion_jobs"
+    __table_args__ = (
+        UniqueConstraint("experience_id", name="uq_ingestion_jobs_experience_id"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4

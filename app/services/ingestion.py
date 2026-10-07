@@ -1,6 +1,8 @@
 import uuid
 
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import mq
@@ -32,25 +34,29 @@ async def start_ingestion(
     if result.scalar_one_or_none() is None:
         raise ExperienceNotFoundError(experience_id)
 
-    result = await session.execute(
-        select(IngestionJob).where(
-            IngestionJob.experience_id == experience_id
+    stmt = (
+        pg_insert(IngestionJob)
+        .values(experience_id=experience_id, status=IngestionStatus.QUEUED, error=None)
+        .on_conflict_do_update(
+            constraint="uq_ingestion_jobs_experience_id",
+            set_={"status": IngestionStatus.QUEUED, "error": None},
+            where=IngestionJob.status.in_(
+                [IngestionStatus.INGESTED, IngestionStatus.FAILED]
+            ),
         )
+        .returning(IngestionJob)
     )
-    job = result.scalar_one_or_none()
 
-    if job is not None and job.status in (
-        IngestionStatus.QUEUED,
-        IngestionStatus.PROCESSING,
-    ):
+    try:
+        result = await session.execute(stmt)
+    except IntegrityError:
+        await session.rollback()
         raise AlreadyInProgressError(experience_id)
 
-    if job is not None:
-        job.status = IngestionStatus.QUEUED
-        job.error = None
-    else:
-        job = IngestionJob(experience_id=experience_id)
-        session.add(job)
+    job = result.scalar_one_or_none()
+    if job is None:
+        await session.rollback()
+        raise AlreadyInProgressError(experience_id)
 
     await session.flush()
 
