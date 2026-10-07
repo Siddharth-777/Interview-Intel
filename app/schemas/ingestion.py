@@ -4,6 +4,11 @@ from datetime import datetime
 from pydantic import BaseModel
 
 
+class IngestResponse(BaseModel):
+    id: uuid.UUID
+    status: str
+
+
 class IngestionJobOut(BaseModel):
     model_config = {"from_attributes": True}
 

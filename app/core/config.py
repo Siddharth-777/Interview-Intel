@@ -6,6 +6,9 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str = "postgresql+asyncpg://user:pass@localhost:5432/interview_intel"
     RABBITMQ_URL: str = "amqp://guest:guest@localhost:5672/"
+    INGEST_QUEUE: str = "ingest_queue"
+    INGEST_DLX: str = "ingest_dlx"
+    INGEST_DLQ: str = "ingest_dlq"
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     LLM_MODEL: str = "llama3.2"
     EMBED_MODEL: str = "nomic-embed-text"

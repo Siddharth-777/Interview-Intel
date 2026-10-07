@@ -28,7 +28,12 @@ class IngestionJob(TimestampMixin, Base):
         nullable=False,
     )
     status: Mapped[IngestionStatus] = mapped_column(
-        Enum(IngestionStatus), nullable=False, default=IngestionStatus.QUEUED
+        Enum(
+            IngestionStatus,
+            values_callable=lambda e: [x.value for x in e],
+        ),
+        nullable=False,
+        default=IngestionStatus.QUEUED,
     )
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(

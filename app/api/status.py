@@ -1,11 +1,30 @@
 import uuid
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.db import get_session
+from app.schemas.status import StatusResponse
+from app.services.ingestion import (
+    ExperienceNotFoundError,
+    get_ingestion_status,
+)
 
 router = APIRouter()
 
 
-@router.get("/status/{experience_id}")
-async def get_status(experience_id: uuid.UUID) -> dict:
-    # TODO: look up ingestion_jobs for this experience_id, return status
-    raise HTTPException(status_code=501, detail="Not implemented")
+@router.get(
+    "/status/{experience_id}",
+    response_model=StatusResponse,
+)
+async def get_status(
+    experience_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+) -> StatusResponse:
+    try:
+        result = await get_ingestion_status(
+            experience_id, session
+        )
+    except ExperienceNotFoundError:
+        raise HTTPException(404, "Experience not found")
+    return StatusResponse(**result)
